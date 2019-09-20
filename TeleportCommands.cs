@@ -79,7 +79,7 @@ namespace GoThere
         public static void Command_TeleportToRockford()
         {
             Destination Rockford = new Destination("Rockford", new Vector3(-559.9272f, -135.6659f, 38.17828f), 20.00237f);
-            playerPed.Position = Rockford.getLocation(); // Set the player's current position to Paleto Bay
+            playerPed.Position = Rockford.getLocation(); // Set the player's current position to Rockford Hills
             playerPed.Heading = Rockford.heading;        // Set the player's current heading to straght on
             Game.DisplaySubtitle("~g~Teleported to: " + "~b~Rockford Hills~g~!");
         }
@@ -88,7 +88,7 @@ namespace GoThere
         public static void Command_TeleportToSandyShores()
         {
             Destination Sandy = new Destination("Sandy", new Vector3(1859.35f, 3676.741f, 33.64919f), 29.02762f);
-            playerPed.Position = Sandy.getLocation(); // Set the player's current position to Paleto Bay
+            playerPed.Position = Sandy.getLocation(); // Set the player's current position to Sandy Shores
             playerPed.Heading = Sandy.heading;        // Set the player's current heading to straght on
             Game.DisplaySubtitle("~g~Teleported to: " + "~b~Sandy Shores~g~!");
         }
@@ -97,7 +97,7 @@ namespace GoThere
         public static void Command_TeleportToVespucci()
         {
             Destination Vespucci = new Destination("Vespucci", new Vector3(-1114.111f, -849.8613f, 19.31662f), 307.3961f);
-            playerPed.Position = Vespucci.getLocation(); // Set the player's current position to Paleto Bay
+            playerPed.Position = Vespucci.getLocation(); // Set the player's current position to Vespucci
             playerPed.Heading = Vespucci.heading;        // Set the player's current heading to straght on
             Game.DisplaySubtitle("~g~Teleported to: " + "~b~Vespucci~g~!");
         }
@@ -106,7 +106,7 @@ namespace GoThere
         public static void Command_TeleportToVinewoodHills()
         {
             Destination VHills = new Destination("VHills", new Vector3(379.1551f, 790.9927f, 190.4106f), 357.8441f);
-            playerPed.Position = VHills.getLocation(); // Set the player's current position to Paleto Bay
+            playerPed.Position = VHills.getLocation(); // Set the player's current position to Vinewood Hills
             playerPed.Heading = VHills.heading;        // Set the player's current heading to straght on
             Game.DisplaySubtitle("~g~Teleported to: " + "~b~Vinewood Hills~g~!");
         }
