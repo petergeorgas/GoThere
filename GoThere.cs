@@ -22,6 +22,7 @@ namespace GoThere
         private static UIMenuListItem StationList;
         private static String current_item;
         private static System.Windows.Forms.Keys menuKey;
+        private static bool customLocationsEnabled;
         public static void Main()
         {
             handleFileCreation(); // Worry about the settings and such.
@@ -130,15 +131,15 @@ namespace GoThere
                     XmlWriterSettings settings = new XmlWriterSettings { Indent = true, OmitXmlDeclaration = true };
                     using (XmlWriter writer = XmlWriter.Create("Plugins/GoThere/Options.xml", settings)) // If the file key doesn't exist, create it
                     {
-
-                        
-                        //This is kinda fucked up right now, I will have to look into learning how to make the XML Fields Cascade.
+                        writer.WriteComment("GoThere uses specific names for keys that can be found at https://bit.ly/2lZm1nt");
                         writer.WriteStartElement("GoThere");
                         writer.WriteElementString("MenuKey", "F4");
+                        writer.WriteElementString("EnableCustomLocations", "false");
                         writer.WriteEndElement();
                         writer.Flush();
 
                         menuKey = System.Windows.Forms.Keys.F4; //Set the menu key to F4
+                        customLocationsEnabled = false; // Disable custom destinations 
                         Console.WriteLine("[GoThere] Options.xml did not exist, so it was created. Default Menu Key is F4!");
                     }
                 }
@@ -149,12 +150,17 @@ namespace GoThere
                     options.Load("Plugins/GoThere/Options.xml"); // Load the XML document
 
                     XmlNode menuKeyNode = options.DocumentElement.SelectSingleNode("/GoThere/MenuKey");
+                    XmlNode locationNode = options.DocumentElement.SelectSingleNode("/GoThere/EnableCustomLocations");
                     string tempkey = menuKeyNode.InnerText;
+                    string locationKey = locationNode.InnerText;
+                   
+
 
 
                     // Once we have grabbed all of our data from the XMLDocument, we should close it, and collect the garbage.
                     options = null;
                     menuKeyNode = null;
+                    locationNode = null;
                     GC.Collect();
                     GC.WaitForPendingFinalizers(); // Called for GC to occur Synchronously.
 
@@ -170,6 +176,22 @@ namespace GoThere
                         Console.WriteLine("[GoThere] The value for Menu Key in Options.xml does not exist! You can use F4 to open GoThere!");
                         Game.DisplayNotification("~r~[GoThere] \n~w~You have entered a value in ~b~Options.xml ~w~for a menu key that does not exist. You can use ~g~F4 ~w~ to open GoThere!");
 
+                    }
+
+                    // Try to enable/disable custom locations
+                    try
+                    {
+                        customLocationsEnabled = Boolean.Parse(locationKey); // Set whether custom locations are enabled according to the value in the XML File.
+                        // Log to console
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex is FormatException || ex is ArgumentNullException)
+                        {
+                            customLocationsEnabled = false;
+                            // Log to console
+                            Game.DisplayNotification("~r~[GoThere] \n~w~You have entered a value in ~b~Options.xml ~w~for enabling custom locations that does not exist. Custom locations have been ~r~disabled~w~!");
+                        }
                     }
                 }
             }
