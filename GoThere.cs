@@ -127,8 +127,11 @@ namespace GoThere
             {
                 if (!File.Exists("Plugins/GoThere/Options.xml"))
                 {
-                    using (XmlWriter writer = XmlWriter.Create("Plugins/GoThere/Options.xml")) // If the file key doesn't exist, create it
+                    XmlWriterSettings settings = new XmlWriterSettings { Indent = true, OmitXmlDeclaration = true };
+                    using (XmlWriter writer = XmlWriter.Create("Plugins/GoThere/Options.xml", settings)) // If the file key doesn't exist, create it
                     {
+
+                        
                         //This is kinda fucked up right now, I will have to look into learning how to make the XML Fields Cascade.
                         writer.WriteStartElement("GoThere");
                         writer.WriteElementString("MenuKey", "F4");
