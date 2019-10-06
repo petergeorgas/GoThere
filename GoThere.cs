@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using System.Xml;
 using Rage;
 using RAGENativeUI;
@@ -21,8 +22,9 @@ namespace GoThere
         private static UIMenu GoMenu;
         private static UIMenuListItem StationList;
         private static String current_item;
-        private static System.Windows.Forms.Keys menuKey;
+        private static Keys menuKey;
         private static bool customLocationsEnabled;
+        private static ControllerButtons XButton;
         public static void Main()
         {
             handleFileCreation(); // Worry about the settings and such.
@@ -42,6 +44,11 @@ namespace GoThere
 
             MenuProcessFiber = new GameFiber(ProcessLoop);
 
+            if (customLocationsEnabled)
+            {
+                //Add the custom locations to the UI as a list.
+            }
+
             menu_pool.Add(GoMenu); // Add our menu to the menu pool
             GoMenu.AddItem(StationList); // Add a list of destinations -- maybe we want to hold destination OBJECTS. We shall see. 
             GoMenu.AddItem(new UIMenuItem("~y~Teleport")); // Add a button that will ultimately teleport you.
@@ -60,7 +67,7 @@ namespace GoThere
             while (true)
             {
                 GameFiber.Yield();
-                if (Game.IsKeyDown(menuKey) && !menu_pool.IsAnyMenuOpen()) // Toggle switch for our menu. Going to make this a config file. 
+                if ((Game.IsKeyDown(menuKey) || Game.IsControllerButtonDown(XButton)) && !menu_pool.IsAnyMenuOpen()) // Toggle switch for our menu. Going to make this a config file. 
                 {
                     GoMenu.Visible = !GoMenu.Visible;
                 }
@@ -134,11 +141,13 @@ namespace GoThere
                         writer.WriteComment("GoThere uses specific names for keys that can be found at https://bit.ly/2lZm1nt");
                         writer.WriteStartElement("GoThere");
                         writer.WriteElementString("MenuKey", "F4");
+                        writer.WriteElementString("ControllerButton", "None");
                         writer.WriteElementString("EnableCustomLocations", "false");
                         writer.WriteEndElement();
                         writer.Flush();
 
                         menuKey = System.Windows.Forms.Keys.F4; //Set the menu key to F4
+                        // Do nothing about the ControllerButton
                         customLocationsEnabled = false; // Disable custom destinations 
                         Console.WriteLine("[GoThere] Options.xml did not exist, so it was created. Default Menu Key is F4!");
                     }
@@ -150,8 +159,10 @@ namespace GoThere
                     options.Load("Plugins/GoThere/Options.xml"); // Load the XML document
 
                     XmlNode menuKeyNode = options.DocumentElement.SelectSingleNode("/GoThere/MenuKey");
+                    XmlNode buttonNode = options.DocumentElement.SelectSingleNode("/GoThere/ControllerButton"); //TODO: Add support for modifier keys & controller buttons as well.
                     XmlNode locationNode = options.DocumentElement.SelectSingleNode("/GoThere/EnableCustomLocations");
                     string tempkey = menuKeyNode.InnerText;
+                    string tempButton = buttonNode.InnerText;
                     string locationKey = locationNode.InnerText;
                    
 
@@ -167,14 +178,16 @@ namespace GoThere
                     // Try to set the menu toggle key
                     try
                     {
-                        menuKey = (System.Windows.Forms.Keys)Enum.Parse(typeof(System.Windows.Forms.Keys), tempkey); // Set the Menu key to whatever it is in the XML file.
+                        menuKey = (System.Windows.Forms.Keys)Enum.Parse(typeof(Keys), tempkey); // Set the Menu key to whatever it is in the XML file.
+                        XButton = (ControllerButtons)Enum.Parse(typeof(ControllerButtons), tempButton); // Set the Menu controller button to whatever it is in the XML file.
                         Console.WriteLine("[GoThere] Key to open GoThere Menu: " + tempkey);
                     }
                     catch (ArgumentException AE) // Enum.Parse throws an ArgumentException if the key string is not in the enumeration, so we're going to need to catch it 
                     {
-                        menuKey = System.Windows.Forms.Keys.F4; // Set the menuKey to F4
-                        Console.WriteLine("[GoThere] The value for Menu Key in Options.xml does not exist! You can use F4 to open GoThere!");
-                        Game.DisplayNotification("~r~[GoThere] \n~w~You have entered a value in ~b~Options.xml ~w~for a menu key that does not exist. You can use ~g~F4 ~w~ to open GoThere!");
+                        menuKey = Keys.F4; // Set the menuKey to F4
+                        // Do nothing with the xbox key
+                        Console.WriteLine("[GoThere] The value for Menu Key or Menu Button in Options.xml does not exist! You can use F4 to open GoThere!");
+                        Game.DisplayNotification("~r~[GoThere] \n~w~You have entered a value in ~b~Options.xml ~w~for a menu key/menu controller button that does not exist. You can use ~g~F4 ~w~ to open GoThere!");
 
                     }
 

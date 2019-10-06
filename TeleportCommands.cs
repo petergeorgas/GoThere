@@ -11,6 +11,7 @@ namespace GoThere
     public static class TeleportCommands
     {
         static Ped playerPed = Game.LocalPlayer.Character; //Current Character Ped Object
+        //It may be beneficial, resourcefully, to create our Destination objects up here
 
         [Rage.Attributes.ConsoleCommand(Description = "Teleports the player to Bolingbroke Penitentiary.")]
         public static void Command_TeleportToBolingbroke()

@@ -13,11 +13,6 @@ namespace GoThere
         public float heading;
         public String name;
 
-        public Destination() // Default Constructor
-        {
-
-        }
-
         public Destination(String destinationName, Vector3 destinationLocation, float destinationHeading)
         {
             name = destinationName;
@@ -46,7 +41,7 @@ namespace GoThere
         //Converts the Destination object to a string
         public String toString()
         {
-            String destinationString = name + "\n" + location.ToString() + "\n" + heading;
+            String destinationString = name + "\n" + location.ToString() + "\n Heading: " + heading;
             return destinationString;
         }
     }
