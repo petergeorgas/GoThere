@@ -21,6 +21,7 @@ namespace GoThere
         private static MenuPool menu_pool;
         private static UIMenu GoMenu;
         private static UIMenuListItem StationList;
+        private static UIMenuListItem CustomList;
         private static String current_item;
         private static Keys menuKey;
         private static bool customLocationsEnabled;
@@ -40,18 +41,23 @@ namespace GoThere
             GoMenu = new UIMenu("GoThere", "~b~LET'S MOVE!");
             StationList = new UIMenuListItem("~g~List of Stations: ", "", "Bolingbroke", "Davis", "Downtown Vinewood", "La Mesa", "LSIA", "Mission Row",
                                                             "Paleto Bay", "Rockford Hills", "Sandy Shores", "Vespucci", "Vinewood Hills");
+
+
             menu_pool = new MenuPool();
 
             MenuProcessFiber = new GameFiber(ProcessLoop);
 
-            if (customLocationsEnabled)
-            {
-                //Add the custom locations to the UI as a list.
-            }
 
             menu_pool.Add(GoMenu); // Add our menu to the menu pool
             GoMenu.AddItem(StationList); // Add a list of destinations -- maybe we want to hold destination OBJECTS. We shall see. 
             GoMenu.AddItem(new UIMenuItem("~y~Teleport")); // Add a button that will ultimately teleport you.
+
+            if (customLocationsEnabled) // If custom locations are enabled 
+            {
+                CustomList = new UIMenuListItem("~g~Custom Locations: ", ""); // Make a UI List containing each location
+                GoMenu.AddItem(CustomList);
+
+            }
             GoMenu.RefreshIndex(); // Set the index at 0 by using the RefreshIndex method
 
             GoMenu.OnItemSelect += OnItemSelect;
@@ -180,7 +186,7 @@ namespace GoThere
                     {
                         menuKey = (System.Windows.Forms.Keys)Enum.Parse(typeof(Keys), tempkey); // Set the Menu key to whatever it is in the XML file.
                         XButton = (ControllerButtons)Enum.Parse(typeof(ControllerButtons), tempButton); // Set the Menu controller button to whatever it is in the XML file.
-                        Console.WriteLine("[GoThere] Key to open GoThere Menu: " + tempkey);
+                        Console.WriteLine("[GoThere] Key to open GoThere Menu: ~g~" + tempkey + "~w~/~g~" + tempButton);
                     }
                     catch (ArgumentException AE) // Enum.Parse throws an ArgumentException if the key string is not in the enumeration, so we're going to need to catch it 
                     {
