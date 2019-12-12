@@ -26,7 +26,7 @@ namespace GoThere
             }
             catch(Rage.Exceptions.InvalidHandleableException IHE)
             {
-                Game.DisplaySubtitle("~rUnable to teleport!");
+                Game.DisplaySubtitle("~r~Unable to teleport!");
             }
         }
 
@@ -42,7 +42,7 @@ namespace GoThere
             }
             catch (Rage.Exceptions.InvalidHandleableException IHE)
             {
-                Game.DisplaySubtitle("~rUnable to teleport!");
+                Game.DisplaySubtitle("~r~Unable to teleport!");
             }
         }
 
@@ -58,7 +58,7 @@ namespace GoThere
             }
             catch (Rage.Exceptions.InvalidHandleableException IHE)
             {
-                Game.DisplaySubtitle("~rUnable to teleport!");
+                Game.DisplaySubtitle("~r~Unable to teleport!");
             }
         }
 
@@ -74,7 +74,7 @@ namespace GoThere
             }
             catch (Rage.Exceptions.InvalidHandleableException IHE)
             {
-                Game.DisplaySubtitle("~rUnable to teleport!");
+                Game.DisplaySubtitle("~r~Unable to teleport!");
             }
         }
 
@@ -90,7 +90,7 @@ namespace GoThere
             }
             catch (Rage.Exceptions.InvalidHandleableException IHE)
             {
-                Game.DisplaySubtitle("~rUnable to teleport!");
+                Game.DisplaySubtitle("~r~Unable to teleport!");
             }
         }
 
@@ -106,7 +106,7 @@ namespace GoThere
             }
             catch (Rage.Exceptions.InvalidHandleableException IHE)
             {
-                Game.DisplaySubtitle("~rUnable to teleport!");
+                Game.DisplaySubtitle("~r~Unable to teleport!");
             }
         }
 
@@ -122,7 +122,7 @@ namespace GoThere
             }
             catch (Rage.Exceptions.InvalidHandleableException IHE)
             {
-                Game.DisplaySubtitle("~rUnable to teleport!");
+                Game.DisplaySubtitle("~r~Unable to teleport!");
             }
         }
 
@@ -138,7 +138,7 @@ namespace GoThere
             }
             catch (Rage.Exceptions.InvalidHandleableException IHE)
             {
-                Game.DisplaySubtitle("~rUnable to teleport!");
+                Game.DisplaySubtitle("~r~Unable to teleport!");
             }
         }
 
@@ -154,7 +154,7 @@ namespace GoThere
             }
             catch (Rage.Exceptions.InvalidHandleableException IHE)
             {
-                Game.DisplaySubtitle("~rUnable to teleport!");
+                Game.DisplaySubtitle("~r~Unable to teleport!");
             }
         }
 
@@ -170,7 +170,7 @@ namespace GoThere
             }
             catch (Rage.Exceptions.InvalidHandleableException IHE)
             {
-                Game.DisplaySubtitle("~rUnable to teleport!");
+                Game.DisplaySubtitle("~r~Unable to teleport!");
             }
         }
 
@@ -186,7 +186,7 @@ namespace GoThere
             }
             catch (Rage.Exceptions.InvalidHandleableException IHE)
             {
-                Game.DisplaySubtitle("~rUnable to teleport!");
+                Game.DisplaySubtitle("~r~Unable to teleport!");
             }
         }
 
