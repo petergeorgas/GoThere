@@ -20,19 +20,19 @@ namespace GoThere
             heading = destinationHeading;
         }
 
-        // Will output the name of the Destination object
+        // Will return the name of the Destination object
         public String getName()
         {
             return name;
         }
 
-        //Will output the location of the Destination object
+        //Will return the location of the Destination object
         public Vector3 getLocation()
         {
             return location;
         }
 
-        //Will output the heading of the Destination object
+        //Will return the heading of the Destination object
         public float getHeading()
         {
             return heading;

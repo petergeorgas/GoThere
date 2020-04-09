@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using System.Windows.Forms;
 using System.Xml;
 using Rage;
@@ -26,16 +27,19 @@ namespace GoThere
         private static Keys menuKey;
         private static bool customLocationsEnabled;
         private static ControllerButtons XButton;
+       // public static GameConsole console;
+        private static List<Destination> customLocsList = new List<Destination>();
         public static void Main()
         {
             handleFileCreation(); // Worry about the settings and such.
 
+            
             current_item = "Bolingbroke"; // The current item of the list of police stations is updated to Bolingbroke, this fixes a bug where upon first loading the plugin, a user 
                                           // Would have to switch to a different location before being able to teleport back to Bolingbroke. 
 
 
-            // Display a notification in the console that the plugin loaded successfully
-            Game.DisplayNotification("~r~[GoThere] \nGoThere ~w~by ~b~Peter Georgas ~w~has loaded successfully!"); // Display a notification above the radar that the plugin loaded successfully
+           
+            
 
 
             GoMenu = new UIMenu("GoThere", "~b~LET'S MOVE!");
@@ -64,6 +68,9 @@ namespace GoThere
             GoMenu.OnListChange += OnListChange;
 
             MenuProcessFiber.Start(); // Start process fiber
+
+            Game.DisplayNotification("~r~[GoThere] \nGoThere ~w~by ~b~Peter Georgas ~w~has loaded successfully!"); // Display a notification above the radar that the plugin loaded successfully
+            //console.Print("[GoThere] GoThere by Peter Georgas has loaded successfully!");
 
             GameFiber.Hibernate(); // Continue with our plugin. Prevent it from being unloaded
         }
@@ -137,7 +144,7 @@ namespace GoThere
         // This Method is called right when our program begins, it's gonna take care of all of the reading/writing from our XML file we may need to do when the plugin loads.
         public static void handleFileCreation()
         {
-            try
+            try // Handle Options.xml creation
             {
                 if (!File.Exists("Plugins/GoThere/Options.xml"))
                 {
@@ -155,7 +162,7 @@ namespace GoThere
                         menuKey = System.Windows.Forms.Keys.F4; //Set the menu key to F4
                         // Do nothing about the ControllerButton
                         customLocationsEnabled = false; // Disable custom destinations 
-                        Console.WriteLine("[GoThere] Options.xml did not exist, so it was created. Default Menu Key is F4!");
+                        //console.Print("[GoThere] Options.xml did not exist, so it was created. Default Menu Key is F4!");
                     }
                 }
                 else // If the file does exist
@@ -186,13 +193,14 @@ namespace GoThere
                     {
                         menuKey = (System.Windows.Forms.Keys)Enum.Parse(typeof(Keys), tempkey); // Set the Menu key to whatever it is in the XML file.
                         XButton = (ControllerButtons)Enum.Parse(typeof(ControllerButtons), tempButton); // Set the Menu controller button to whatever it is in the XML file.
-                        Console.WriteLine("[GoThere] Key to open GoThere Menu: ~g~" + tempkey + "~w~/~g~" + tempButton);
+                        //console.Print("[GoThere] Key to open GoThere Menu: ~g~" + tempkey + "~w~/~g~" + tempButton);
                     }
                     catch (ArgumentException AE) // Enum.Parse throws an ArgumentException if the key string is not in the enumeration, so we're going to need to catch it 
                     {
                         menuKey = Keys.F4; // Set the menuKey to F4
                         // Do nothing with the xbox key
-                        Console.WriteLine("[GoThere] The value for Menu Key or Menu Button in Options.xml does not exist! You can use F4 to open GoThere!");
+                        //console.Print("[GoThere] The value for Menu Key or Menu Button in Options.xml does not exist! You can use F4 to open GoThere!");
+                        Game.LogTrivial("[GoThere] The value for Menu Key or Menu Button in Options.xml does not exist! You can use F4 to open GoThere!");
                         Game.DisplayNotification("~r~[GoThere] \n~w~You have entered a value in ~b~Options.xml ~w~for a menu key/menu controller button that does not exist. You can use ~g~F4 ~w~ to open GoThere!");
 
                     }
@@ -201,22 +209,88 @@ namespace GoThere
                     try
                     {
                         customLocationsEnabled = Boolean.Parse(locationKey); // Set whether custom locations are enabled according to the value in the XML File.
-                        // Log to console
+                        if(customLocationsEnabled)
+                        {
+                            //console.Print("[GoThere] Custom locations have been enabled!");
+                            Game.LogTrivial("[GoThere] Custom locations have been enabled!");
+                        }
+                        else
+                        {
+                            //console.Print("[GoThere] Custom locations have been disabled!");
+                            Game.LogTrivial("[GoThere] Custom locations have been disabled!");
+                        }
+                        
                     }
                     catch (Exception ex)
                     {
                         if (ex is FormatException || ex is ArgumentNullException)
                         {
                             customLocationsEnabled = false;
-                            // Log to console
+                            //console.Print("[GoThere] ERROR! You have entered a value in Options.xml for enabling custom locations that does not exist. Custom locations have been disabled!");
+                            Game.LogTrivial("[GoThere] ERROR! You have entered a value in Options.xml for enabling custom locations that does not exist. Custom locations have been disabled!");
                             Game.DisplayNotification("~r~[GoThere] \n~w~You have entered a value in ~b~Options.xml ~w~for enabling custom locations that does not exist. Custom locations have been ~r~disabled~w~!");
                         }
                     }
                 }
+
+                if (!File.Exists("Plugins/GoThere/CustomLocations.xml")) // If CustomLocations.xml doesn't exist, create it.
+                {
+                    XmlWriterSettings settings = new XmlWriterSettings { Indent = true, OmitXmlDeclaration = true };
+                    using (XmlWriter writer = XmlWriter.Create("Plugins/GoThere/CustomLocations.xml", settings)) // If the file key doesn't exist, create it
+                    {
+                        writer.WriteComment("GoThere uses this file to store custom locations! You may add a location manually inside this file, or create one in game.");
+                        writer.WriteStartElement("CustomLocations");
+                        writer.WriteStartElement("Item");
+                        writer.WriteElementString("Name", "SampleLocation");
+                        writer.WriteElementString("LocationX", "1853.753");
+                        writer.WriteElementString("LocationY", "2586.172");
+                        writer.WriteElementString("LocationZ", "45.67202");
+                        writer.WriteElementString("LocationHeading", "91.27246");
+                        writer.WriteEndElement();
+                        writer.WriteEndElement();
+                        writer.Flush();
+
+                       // console.Print("[GoThere] CustomLocations.xml did not exist, so it was created.");
+                    }
+                }
+                else // If CustomLocations.xml already exists
+                {
+                    // For each item in the file
+                    // Create a new destination object with the given data 
+                    // Append to a list 
+                    
+                    XDocument customLoc = XDocument.Load("Plugins/GoThere/CustomLocations.xml");
+
+                    foreach(XElement element in customLoc.Descendants("Item"))
+                    {
+                        try
+                        {
+                            String tempName = (String)element.Element("Name");
+                            float tempX = (float)element.Element("LocationX");
+                            float tempY = (float)element.Element("LocationY");
+                            float tempZ = (float)element.Element("LocationZ");
+                            float tempHead = (float)element.Element("LocationHeading");
+                            Vector3 tempVector = new Vector3(tempX, tempY, tempZ); // Cast the values to a float. This may be tricky. Need to make sure casting to float doesn't mess anything up.
+                            Destination newDest = new Destination(tempName, tempVector, tempHead);
+                            customLocsList.Add(newDest); // Append this new location to the list. 
+                            Game.DisplayNotification("~r~[GoThere] \n~w~A custom location named: " + tempName + " has been created and added to the menu!");
+                        }
+                        catch(InvalidCastException ICE)
+                        {
+                           // console.Print("[GoThere] There was a cast problem in CustomLocations.xml. Please re-check your values and try again.");
+                        }
+
+                    }
+                    
+    
+                }
             }
             catch (DirectoryNotFoundException DNF) // Exception thrown when the GoThere folder does not reside in the Plugins folder upon loading the plugin. 
             {
+                //console.Print("[GoThere] GoThere folder could not be found in GTAV/Plugins folder. Please either create the folder or drag and drop it from the zip archive.");
+                Game.LogTrivial("[GoThere] GoThere folder could not be found in GTAV/Plugins folder. Please either create the folder or drag and drop it from the zip archive.");
                 Game.DisplayNotification("~r~[GoThere] \n~w~GoThere folder could not be found in ~g~GTAV~w~/~g~Plugins ~w~folder. Please either ~g~create ~w~the folder or ~g~drag and drop ~w~it from the zip archive.");
+                //Game.UnloadActivePlugin();  //Exit the plugin? 
                 // Exit the plugin.
                 // If we don't exit, shit hits the fan because the plugin will be loaded twice, and it will attempt to create multiple console commands. 
             }
