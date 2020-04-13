@@ -21,8 +21,11 @@ namespace GoThere
         private static GameFiber MenuProcessFiber;
         private static MenuPool menu_pool;
         private static UIMenu GoMenu;
+        private static UIMenu LocMenu;
         private static UIMenuListItem StationList;
         private static UIMenuListItem CustomList;
+        private static UIMenuItem navigateToLocMenu;
+        
         private static String current_item;
         private static Keys menuKey;
         private static bool customLocationsEnabled;
@@ -46,6 +49,7 @@ namespace GoThere
             StationList = new UIMenuListItem("~g~List of Stations: ", "", "Bolingbroke", "Davis", "Downtown Vinewood", "La Mesa", "LSIA", "Mission Row",
                                                             "Paleto Bay", "Rockford Hills", "Sandy Shores", "Vespucci", "Vinewood Hills");
 
+            LocMenu = new UIMenu("Custom Locations", "");
 
             menu_pool = new MenuPool();
 
@@ -55,17 +59,53 @@ namespace GoThere
             menu_pool.Add(GoMenu); // Add our menu to the menu pool
             GoMenu.AddItem(StationList); // Add a list of destinations -- maybe we want to hold destination OBJECTS. We shall see. 
             GoMenu.AddItem(new UIMenuItem("~y~Teleport")); // Add a button that will ultimately teleport you.
+            GoMenu.OnItemSelect += OnItemSelect;
+            GoMenu.OnListChange += OnListChange;
 
             if (customLocationsEnabled) // If custom locations are enabled 
             {
-                CustomList = new UIMenuListItem("~g~Custom Locations: ", ""); // Make a UI List containing each location
-                GoMenu.AddItem(CustomList);
+                Ped playerPed = Game.LocalPlayer.Character;
+                navigateToLocMenu = new UIMenuItem("Custom Locations");
+                LocMenu = new UIMenu("Custom Locations", "Teleport to custom locations."); // Initialize the locations menu
+                menu_pool.Add(LocMenu); // Add the locations menu to the menu pool
+                
+                GoMenu.AddItem(navigateToLocMenu);  // Add the ui item to the main menu
+                GoMenu.BindMenuToItem(LocMenu, navigateToLocMenu);  // Bind the locations menu to the ui item
+                LocMenu.ParentMenu = GoMenu;    // Set the parent menu of the locations menu to be the main menu
+
+                //UIMenuItem saveButton = new UIMenuItem("~g~Save current location");
+                
+                UIMenuStringSelector saveButton = new UIMenuStringSelector("~g~Save Current Location~w~: ", "0");
+                LocMenu.AddItem(saveButton);
+                
+                // Create a button to save current location as a new custom location -- allow for naming as well 
+                // For each destination object in the list containing custom locations, create a button that teleports you to said location 
+                // 
+                foreach (Destination current_destination in customLocsList) // For each destination in the list containing all of the destinations
+                {
+                    UIMenuItem newButton = new UIMenuItem(current_destination.getName());
+
+                    LocMenu.AddItem(newButton); // Add a new button to the menu
+                   
+                    LocMenu.OnItemSelect += (sender, selectedItem, index) => // When the button is clicked, teleport the player and notify them. 
+                        {
+                            if (selectedItem == (UIMenuItem)saveButton) // If the save location button was clicked
+                            {
+                                Game.DisplaySubtitle("~g~Location has been saved!");
+                            }
+                            else // If a custom location was clicked
+                            {
+                                playerPed.Position = customLocsList[index-1].getLocation(); // Set their position and heading to the proper one
+                                playerPed.Heading = customLocsList[index-1].getHeading();
+                                Game.DisplaySubtitle("~g~Teleported to: " + "~b~" + customLocsList[index-1].getName() + "~g~!");
+                            }
+                        };
+                }
 
             }
             GoMenu.RefreshIndex(); // Set the index at 0 by using the RefreshIndex method
 
-            GoMenu.OnItemSelect += OnItemSelect;
-            GoMenu.OnListChange += OnListChange;
+            
 
             MenuProcessFiber.Start(); // Start process fiber
 
@@ -100,7 +140,8 @@ namespace GoThere
 
         public static void OnItemSelect(UIMenu sender, UIMenuItem selectedItem, int index) // Overridden OnItemSelect method
         {
-            if (sender != GoMenu) return; // If there is no change from our menu, just return. 
+        
+            if ((sender != GoMenu) || selectedItem == navigateToLocMenu) return; // If the sender is not the main menu or the selected item is the button to go to the custom locations menu, return.
 
             switch (current_item)
             {
@@ -136,6 +177,8 @@ namespace GoThere
                     break;
                 case "Vinewood Hills":
                     TeleportCommands.Command_TeleportToVinewoodHills();
+                    break;
+                default:
                     break;
             }
         }
@@ -200,7 +243,7 @@ namespace GoThere
                         menuKey = Keys.F4; // Set the menuKey to F4
                         // Do nothing with the xbox key
                         //console.Print("[GoThere] The value for Menu Key or Menu Button in Options.xml does not exist! You can use F4 to open GoThere!");
-                        Game.LogTrivial("[GoThere] The value for Menu Key or Menu Button in Options.xml does not exist! You can use F4 to open GoThere!");
+                        Game.LogTrivial("The value for Menu Key or Menu Button in Options.xml does not exist! You can use F4 to open GoThere!");
                         Game.DisplayNotification("~r~[GoThere] \n~w~You have entered a value in ~b~Options.xml ~w~for a menu key/menu controller button that does not exist. You can use ~g~F4 ~w~ to open GoThere!");
 
                     }
@@ -212,12 +255,12 @@ namespace GoThere
                         if(customLocationsEnabled)
                         {
                             //console.Print("[GoThere] Custom locations have been enabled!");
-                            Game.LogTrivial("[GoThere] Custom locations have been enabled!");
+                            Game.LogTrivial("Custom locations have been enabled!");
                         }
                         else
                         {
                             //console.Print("[GoThere] Custom locations have been disabled!");
-                            Game.LogTrivial("[GoThere] Custom locations have been disabled!");
+                            Game.LogTrivial("Custom locations have been disabled!");
                         }
                         
                     }
@@ -227,7 +270,7 @@ namespace GoThere
                         {
                             customLocationsEnabled = false;
                             //console.Print("[GoThere] ERROR! You have entered a value in Options.xml for enabling custom locations that does not exist. Custom locations have been disabled!");
-                            Game.LogTrivial("[GoThere] ERROR! You have entered a value in Options.xml for enabling custom locations that does not exist. Custom locations have been disabled!");
+                            Game.LogTrivial("ERROR! You have entered a value in Options.xml for enabling custom locations that does not exist. Custom locations have been disabled!");
                             Game.DisplayNotification("~r~[GoThere] \n~w~You have entered a value in ~b~Options.xml ~w~for enabling custom locations that does not exist. Custom locations have been ~r~disabled~w~!");
                         }
                     }
@@ -266,14 +309,17 @@ namespace GoThere
                         try
                         {
                             String tempName = (String)element.Element("Name");
-                            float tempX = (float)element.Element("LocationX");
-                            float tempY = (float)element.Element("LocationY");
-                            float tempZ = (float)element.Element("LocationZ");
-                            float tempHead = (float)element.Element("LocationHeading");
-                            Vector3 tempVector = new Vector3(tempX, tempY, tempZ); // Cast the values to a float. This may be tricky. Need to make sure casting to float doesn't mess anything up.
-                            Destination newDest = new Destination(tempName, tempVector, tempHead);
-                            customLocsList.Add(newDest); // Append this new location to the list. 
-                            Game.DisplayNotification("~r~[GoThere] \n~w~A custom location named: " + tempName + " has been created and added to the menu!");
+                            if (!tempName.Equals("SampleLocation"))  // We don't want to add our sample location, so as long as the name of the location isn't SampleLocation, add it to our menu
+                            {
+                                float tempX = (float)element.Element("LocationX");
+                                float tempY = (float)element.Element("LocationY");
+                                float tempZ = (float)element.Element("LocationZ");
+                                float tempHead = (float)element.Element("LocationHeading");
+                                Vector3 tempVector = new Vector3(tempX, tempY, tempZ); // Cast the values to a float. This may be tricky. Need to make sure casting to float doesn't mess anything up.
+                                Destination newDest = new Destination(tempName, tempVector, tempHead);
+                                customLocsList.Add(newDest); // Append this new location to the list. 
+                                Game.DisplayNotification("~r~[GoThere] \n~w~A custom location named: " + tempName + " has been created and added to the menu!");
+                            }
                         }
                         catch(InvalidCastException ICE)
                         {
@@ -288,9 +334,9 @@ namespace GoThere
             catch (DirectoryNotFoundException DNF) // Exception thrown when the GoThere folder does not reside in the Plugins folder upon loading the plugin. 
             {
                 //console.Print("[GoThere] GoThere folder could not be found in GTAV/Plugins folder. Please either create the folder or drag and drop it from the zip archive.");
-                Game.LogTrivial("[GoThere] GoThere folder could not be found in GTAV/Plugins folder. Please either create the folder or drag and drop it from the zip archive.");
+                Game.LogTrivial("GoThere folder could not be found in GTAV/Plugins folder. Please either create the folder or drag and drop it from the zip archive.");
                 Game.DisplayNotification("~r~[GoThere] \n~w~GoThere folder could not be found in ~g~GTAV~w~/~g~Plugins ~w~folder. Please either ~g~create ~w~the folder or ~g~drag and drop ~w~it from the zip archive.");
-                //Game.UnloadActivePlugin();  //Exit the plugin? 
+                Game.UnloadActivePlugin();  //Exit the plugin? 
                 // Exit the plugin.
                 // If we don't exit, shit hits the fan because the plugin will be loaded twice, and it will attempt to create multiple console commands. 
             }
