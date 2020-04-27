@@ -365,14 +365,12 @@ namespace GoThere
                 Game.LogTrivial("GoThere folder could not be found in GTAV/Plugins folder. Please either create the folder or drag and drop it from the zip archive.");
                 Game.DisplayNotification("~r~[GoThere] \n~w~GoThere folder could not be found in ~g~GTAV~w~/~g~Plugins ~w~folder. Please either ~g~create ~w~the folder or ~g~drag and drop ~w~it from the zip archive.");
                 Game.UnloadActivePlugin();  //Exit the plugin? 
-                // Exit the plugin.
-                // If we don't exit, shit hits the fan because the plugin will be loaded twice, and it will attempt to create multiple console commands. 
+                // Exit the plugin
             }
         }
         public static void writeCustomLoc(Destination d)
         {
             XDocument customLoc = XDocument.Load("Plugins/GoThere/CustomLocations.xml");
-            XElement item = customLoc.Element("CustomLocations");
 
             var newStuff = new XElement("Item",
                            new XElement("Name", d.getName()),
