@@ -31,7 +31,7 @@ namespace GoThere
         private static bool customLocationsEnabled;
         private static ControllerButtons XButton;
        // public static GameConsole console;
-        private static List<Destination> customLocsList = new List<Destination>();
+        public static List<Destination> customLocsList = new List<Destination>(); // List to add custom locations
         public static void Main()
         {
             handleFileCreation(); // Worry about the settings and such.
@@ -64,7 +64,7 @@ namespace GoThere
 
             if (customLocationsEnabled) // If custom locations are enabled 
             {
-                Ped playerPed = Game.LocalPlayer.Character;
+               
                 navigateToLocMenu = new UIMenuItem("Custom Locations");
                 LocMenu = new UIMenu("Custom Locations", "Teleport to custom locations."); // Initialize the locations menu
                 menu_pool.Add(LocMenu); // Add the locations menu to the menu pool
@@ -74,33 +74,13 @@ namespace GoThere
                 LocMenu.ParentMenu = GoMenu;    // Set the parent menu of the locations menu to be the main menu
 
                 //UIMenuItem saveButton = new UIMenuItem("~g~Save current location");
-                
-                UIMenuStringSelector saveButton = new UIMenuStringSelector("~g~Save Current Location~w~: ", "0");
-                LocMenu.AddItem(saveButton);
-                
+
+
+
                 // Create a button to save current location as a new custom location -- allow for naming as well 
                 // For each destination object in the list containing custom locations, create a button that teleports you to said location 
                 // 
-                foreach (Destination current_destination in customLocsList) // For each destination in the list containing all of the destinations
-                {
-                    UIMenuItem newButton = new UIMenuItem(current_destination.getName());
-
-                    LocMenu.AddItem(newButton); // Add a new button to the menu
-                   
-                    LocMenu.OnItemSelect += (sender, selectedItem, index) => // When the button is clicked, teleport the player and notify them. 
-                        {
-                            if (selectedItem == (UIMenuItem)saveButton) // If the save location button was clicked
-                            {
-                                Game.DisplaySubtitle("~g~Location has been saved!");
-                            }
-                            else // If a custom location was clicked
-                            {
-                                playerPed.Position = customLocsList[index-1].getLocation(); // Set their position and heading to the proper one
-                                playerPed.Heading = customLocsList[index-1].getHeading();
-                                Game.DisplaySubtitle("~g~Teleported to: " + "~b~" + customLocsList[index-1].getName() + "~g~!");
-                            }
-                        };
-                }
+                RefreshCustomLocationsMenu();
 
             }
             GoMenu.RefreshIndex(); // Set the index at 0 by using the RefreshIndex method
@@ -183,6 +163,54 @@ namespace GoThere
             }
         }
 
+
+        // This method is responsible for creating the buttons for the custom locations menu
+        public static void RefreshCustomLocationsMenu()
+        {
+            
+            LocMenu.Clear(); // Clear the menu
+          //  LocMenu.RefreshIndex();
+
+            
+            UIMenuStringSelector saveButton = new UIMenuStringSelector("~g~Save Current Location", "");
+            LocMenu.AddItem(saveButton);
+
+
+            try
+            {
+                foreach (Destination current_destination in customLocsList) // For each destination in the list containing all of the destinations
+                {
+                    Ped playerPed = Game.LocalPlayer.Character;
+                    UIMenuItem newButton = new UIMenuItem(current_destination.getName());
+
+                    LocMenu.AddItem(newButton); // Add a new button to the menu
+
+                    LocMenu.OnItemSelect += (sender, selectedItem, index) => // When the button is clicked, teleport the player and notify them. 
+                    {
+                        if (index == 0) // If the save location button was clicked
+                        {
+                            Game.DisplaySubtitle("~g~Location has been saved!");
+                        }
+                        else // If a custom location was clicked
+                        {
+                            playerPed.Position = customLocsList[index-1].getLocation(); // Set their position and heading to the proper one
+                            playerPed.Heading = customLocsList[index-1].getHeading();
+                            Game.DisplaySubtitle("~g~Teleported to: " + "~b~" + customLocsList[index - 1].getName() + "~g~!");
+                        }
+                    };
+                }
+                
+            }
+            catch (ArgumentOutOfRangeException AE)
+            {
+                Game.DisplayNotification("~r~[GoThere]\nSomething went wrong! IndexOutOfRange!");
+            }
+            finally
+            {
+                LocMenu.RefreshIndex();
+                menu_pool.RefreshIndex();
+            }
+        }
 
         // This Method is called right when our program begins, it's gonna take care of all of the reading/writing from our XML file we may need to do when the plugin loads.
         public static void handleFileCreation()
@@ -318,7 +346,7 @@ namespace GoThere
                                 Vector3 tempVector = new Vector3(tempX, tempY, tempZ); // Cast the values to a float. This may be tricky. Need to make sure casting to float doesn't mess anything up.
                                 Destination newDest = new Destination(tempName, tempVector, tempHead);
                                 customLocsList.Add(newDest); // Append this new location to the list. 
-                                Game.DisplayNotification("~r~[GoThere] \n~w~A custom location named: " + tempName + " has been created and added to the menu!");
+                                Game.LogTrivial("A custom location named: " + tempName + " has been created and added to the menu!");
                             }
                         }
                         catch(InvalidCastException ICE)
@@ -340,6 +368,21 @@ namespace GoThere
                 // Exit the plugin.
                 // If we don't exit, shit hits the fan because the plugin will be loaded twice, and it will attempt to create multiple console commands. 
             }
+        }
+        public static void writeCustomLoc(Destination d)
+        {
+            XDocument customLoc = XDocument.Load("Plugins/GoThere/CustomLocations.xml");
+            XElement item = customLoc.Element("CustomLocations");
+
+            var newStuff = new XElement("Item",
+                           new XElement("Name", d.getName()),
+                           new XElement("LocationX", d.getLocation().X),
+                           new XElement("LocationY", d.getLocation().Y),
+                           new XElement("LocationZ", d.getLocation().Z),
+                           new XElement("LocationHeading", d.getHeading()));
+            customLoc.Element("CustomLocations").Add(newStuff);
+
+            customLoc.Save("Plugins/GoThere/CustomLocations.xml");
         }
     }
 }

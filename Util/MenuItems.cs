@@ -121,7 +121,17 @@ namespace RAGENativeUI.Elements
             string input = UserInput.GetUserInput(prompt, DisplayInputBox, this.MaxInputLength);
             if (input != null && ValidateInput(input, out T parsedValue))
             {
+
+                Ped playerPed = Game.LocalPlayer.Character;
+                Vector3 tempPosition = playerPed.Position;
+                
                 ItemValue = parsedValue;
+                GoThere.Destination tempDest = new GoThere.Destination(ItemValue.ToString(), playerPed.Position, playerPed.Heading);
+                GoThere.GoThere.customLocsList.Add(tempDest); // Add the current location to the list containing all the destinations
+                GoThere.GoThere.RefreshCustomLocationsMenu(); // Refresh the menu
+                                                              
+                GoThere.GoThere.writeCustomLoc(tempDest); // Write custom location to XML file. 
+                
             }
             else if (input != null)
             {
