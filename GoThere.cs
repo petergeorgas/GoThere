@@ -58,7 +58,6 @@ namespace GoThere
 
             menu_pool.Add(GoMenu); // Add our menu to the menu pool
             GoMenu.AddItem(StationList); // Add a list of destinations -- maybe we want to hold destination OBJECTS. We shall see. 
-            GoMenu.AddItem(new UIMenuItem("~y~Teleport")); // Add a button that will ultimately teleport you.
             GoMenu.OnItemSelect += OnItemSelect;
             GoMenu.OnListChange += OnListChange;
 
