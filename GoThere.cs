@@ -11,7 +11,7 @@ using Rage;
 using RAGENativeUI;
 using RAGENativeUI.Elements;
 
-[assembly: Rage.Attributes.Plugin("GoThere", Description = "GoThere lets users easily teleport around San Andreas to all police stations.", Author = "Peter Georgas")]
+[assembly: Rage.Attributes.Plugin("GoThere", Description = "GoThere enables users to teleport around the GTA V map with ease.", Author = "Cavasi")]
 
 //TODO: Prevent GoThere from being loaded multiple times.
 namespace GoThere
@@ -82,7 +82,7 @@ namespace GoThere
 
             MenuProcessFiber.Start(); // Start process fiber
 
-            Game.DisplayNotification("~r~[GoThere] \nGoThere ~w~by ~b~Peter Georgas ~w~has loaded successfully!"); // Display a notification above the radar that the plugin loaded successfully
+            Game.DisplayNotification("~r~[GoThere] \nGoThere v1.0 ~w~by ~b~Cavasi ~w~has loaded successfully!"); // Display a notification above the radar that the plugin loaded successfully
 
             GameFiber.Hibernate(); // Continue with our plugin. Prevent it from being unloaded
         }
@@ -106,15 +106,22 @@ namespace GoThere
                         if (confirmPress == 2)
                         {
                             String deleteName = customLocsList[index - 1].getName();
+                            try
+                            {
+                                removeCustomLoc(customLocsList[index - 1]); // Remove from XML file
 
-                            removeCustomLoc(customLocsList[index - 1]); // Remove from XML file
+                                customLocsList.RemoveAt(index - 1); // Remove the destination from customLocsList
 
-                            customLocsList.RemoveAt(index - 1); // Remove the destination from customLocsList
-
-                            LocMenu.RemoveItemAt(index - 1); // Remove the destination from the menu
-                            confirmPress = 0;  // Reset the value of confirmPress
-                            RefreshCustomLocationsMenu(); // Refresh the menu
-                            Game.DisplaySubtitle("~r~" + deleteName + " ~w~has been deleted.");
+                                LocMenu.RemoveItemAt(index - 1); // Remove the destination from the menu
+                                confirmPress = 0;  // Reset the value of confirmPress
+                                RefreshCustomLocationsMenu(); // Refresh the menu
+                                Game.DisplaySubtitle("~r~" + deleteName + " ~w~has been deleted.");
+                            }
+                            catch(ArgumentOutOfRangeException AE)
+                            {
+                                Game.DisplayNotification("~r~[GoThere]\nSomething went wrong! IndexOutOfRange!");
+                                Game.LogVerbose("Something went wrong when deleting" + deleteName + ". IndexOutOfRange.");
+                            }
                         }
                         else
                         {
