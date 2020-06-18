@@ -28,9 +28,9 @@ namespace GoThere
         
         private static String current_item;
         private static Keys menuKey;
+        private static Keys removeKey;
         private static bool customLocationsEnabled;
         private static ControllerButtons XButton;
-       // public static GameConsole console;
         public static List<Destination> customLocsList = new List<Destination>(); // List to add custom locations
         public static void Main()
         {
@@ -71,14 +71,8 @@ namespace GoThere
                 GoMenu.AddItem(navigateToLocMenu);  // Add the ui item to the main menu
                 GoMenu.BindMenuToItem(LocMenu, navigateToLocMenu);  // Bind the locations menu to the ui item
                 LocMenu.ParentMenu = GoMenu;    // Set the parent menu of the locations menu to be the main menu
-
-                //UIMenuItem saveButton = new UIMenuItem("~g~Save current location");
-
-
-
-                // Create a button to save current location as a new custom location -- allow for naming as well 
-                // For each destination object in the list containing custom locations, create a button that teleports you to said location 
-                // 
+                InstructionalButton removeButtonKeyButton = new InstructionalButton(removeKey.ToString(), "Remove Destination"); // Add instructional button showing users how to remove a dest.
+                LocMenu.AddInstructionalButton(removeButtonKeyButton);
                 RefreshCustomLocationsMenu();
 
             }
@@ -89,20 +83,46 @@ namespace GoThere
             MenuProcessFiber.Start(); // Start process fiber
 
             Game.DisplayNotification("~r~[GoThere] \nGoThere ~w~by ~b~Peter Georgas ~w~has loaded successfully!"); // Display a notification above the radar that the plugin loaded successfully
-            //console.Print("[GoThere] GoThere by Peter Georgas has loaded successfully!");
 
             GameFiber.Hibernate(); // Continue with our plugin. Prevent it from being unloaded
         }
-
+// e
         public static void ProcessLoop()
         {
+            int confirmPress = 0; // Value used to count how many times we have pressed the delete key
             while (true)
             {
+                int index = LocMenu.CurrentSelection; // Grab our current selection
                 GameFiber.Yield();
                 if ((Game.IsKeyDown(menuKey) || Game.IsControllerButtonDown(XButton)) && !menu_pool.IsAnyMenuOpen()) // Toggle switch for our menu. Going to make this a config file. 
                 {
                     GoMenu.Visible = !GoMenu.Visible;
                 }
+                else if(Game.IsKeyDown(removeKey) && LocMenu.Visible) // If the remove key is down and our menu is visible
+                {
+                    if (index != 0)
+                    {
+                        confirmPress++; // Increment the delete key
+                        if (confirmPress == 2)
+                        {
+                            String deleteName = customLocsList[index - 1].getName();
+
+                            removeCustomLoc(customLocsList[index - 1]); // Remove from XML file
+
+                            customLocsList.RemoveAt(index - 1); // Remove the destination from customLocsList
+
+                            LocMenu.RemoveItemAt(index - 1); // Remove the destination from the menu
+                            confirmPress = 0;  // Reset the value of confirmPress
+                            RefreshCustomLocationsMenu(); // Refresh the menu
+                            Game.DisplaySubtitle("~r~" + deleteName + " ~w~has been deleted.");
+                        }
+                        else
+                        {
+                            Game.DisplaySubtitle("Press ~r~" + removeKey.ToString() + " ~w~again to confirm deletion.");
+                        }
+                    }
+                }
+
                 menu_pool.ProcessMenus();
             }
         }
@@ -112,8 +132,6 @@ namespace GoThere
             if (sender != GoMenu || list != StationList) return; // We only want to detect changes from our menu.
 
             current_item = list.Collection[index].Value.ToString();
-            //Game.DisplaySubtitle("~g~Current Item: " + current_item);
-
         }
 
 
@@ -168,13 +186,11 @@ namespace GoThere
         {
             
             LocMenu.Clear(); // Clear the menu
-          //  LocMenu.RefreshIndex();
-
             
             UIMenuStringSelector saveButton = new UIMenuStringSelector("~g~Save Current Location", "");
             LocMenu.AddItem(saveButton);
 
-
+            
             try
             {
                 foreach (Destination current_destination in customLocsList) // For each destination in the list containing all of the destinations
@@ -224,6 +240,7 @@ namespace GoThere
                         writer.WriteComment("GoThere uses specific names for keys that can be found at https://bit.ly/2lZm1nt");
                         writer.WriteStartElement("GoThere");
                         writer.WriteElementString("MenuKey", "F4");
+                        writer.WriteElementString("RemoveDestinationKey", "R");
                         writer.WriteElementString("ControllerButton", "None");
                         writer.WriteElementString("EnableCustomLocations", "false");
                         writer.WriteEndElement();
@@ -232,7 +249,7 @@ namespace GoThere
                         menuKey = System.Windows.Forms.Keys.F4; //Set the menu key to F4
                         // Do nothing about the ControllerButton
                         customLocationsEnabled = false; // Disable custom destinations 
-                        //console.Print("[GoThere] Options.xml did not exist, so it was created. Default Menu Key is F4!");
+                        Game.LogVerbose("Options.xml did not exist, so it was created. Default Menu Key is F4!");
                     }
                 }
                 else // If the file does exist
@@ -243,9 +260,11 @@ namespace GoThere
 
                     XmlNode menuKeyNode = options.DocumentElement.SelectSingleNode("/GoThere/MenuKey");
                     XmlNode buttonNode = options.DocumentElement.SelectSingleNode("/GoThere/ControllerButton"); //TODO: Add support for modifier keys & controller buttons as well.
+                    XmlNode removeNode = options.DocumentElement.SelectSingleNode("/GoThere/RemoveDestinationKey");
                     XmlNode locationNode = options.DocumentElement.SelectSingleNode("/GoThere/EnableCustomLocations");
                     string tempkey = menuKeyNode.InnerText;
                     string tempButton = buttonNode.InnerText;
+                    string tempRemove = removeNode.InnerText;
                     string locationKey = locationNode.InnerText;
                    
 
@@ -254,24 +273,27 @@ namespace GoThere
                     // Once we have grabbed all of our data from the XMLDocument, we should close it, and collect the garbage.
                     options = null;
                     menuKeyNode = null;
+                    removeNode = null;
                     locationNode = null;
                     GC.Collect();
                     GC.WaitForPendingFinalizers(); // Called for GC to occur Synchronously.
 
-                    // Try to set the menu toggle key
+                    // Attempt to set all the keybinds
                     try
                     {
                         menuKey = (System.Windows.Forms.Keys)Enum.Parse(typeof(Keys), tempkey); // Set the Menu key to whatever it is in the XML file.
                         XButton = (ControllerButtons)Enum.Parse(typeof(ControllerButtons), tempButton); // Set the Menu controller button to whatever it is in the XML file.
-                        //console.Print("[GoThere] Key to open GoThere Menu: ~g~" + tempkey + "~w~/~g~" + tempButton);
+                        removeKey = (System.Windows.Forms.Keys)Enum.Parse(typeof(Keys), tempRemove); // Set the remove key to whatever it is in the XML file.
+                        Game.LogTrivial("Key to open GoThere Menu: " + tempkey + "/" + tempButton + ". Key to remove a custom destination: " + tempRemove);
+                        
                     }
                     catch (ArgumentException AE) // Enum.Parse throws an ArgumentException if the key string is not in the enumeration, so we're going to need to catch it 
                     {
                         menuKey = Keys.F4; // Set the menuKey to F4
-                        // Do nothing with the xbox key
-                        //console.Print("[GoThere] The value for Menu Key or Menu Button in Options.xml does not exist! You can use F4 to open GoThere!");
-                        Game.LogTrivial("The value for Menu Key or Menu Button in Options.xml does not exist! You can use F4 to open GoThere!");
-                        Game.DisplayNotification("~r~[GoThere] \n~w~You have entered a value in ~b~Options.xml ~w~for a menu key/menu controller button that does not exist. You can use ~g~F4 ~w~ to open GoThere!");
+                        removeKey = Keys.R; // Set the remove key to R
+                        // Do nothing with the xbox button. 
+                        Game.LogTrivial("ERROR: The value for MenuKey, ControllerButton, or RemoveDestinationKey in Options.xml does not exist! You can use F4 to open GoThere!");
+                        Game.DisplayNotification("~r~[GoThere] \n~w~You have entered a value in ~b~Options.xml ~w~for MenuKey, ControllerButton, or RemoveDestinationKey that does not exist. You can use ~g~F4 ~w~ to open GoThere!");
 
                     }
 
@@ -281,12 +303,10 @@ namespace GoThere
                         customLocationsEnabled = Boolean.Parse(locationKey); // Set whether custom locations are enabled according to the value in the XML File.
                         if(customLocationsEnabled)
                         {
-                            //console.Print("[GoThere] Custom locations have been enabled!");
                             Game.LogTrivial("Custom locations have been enabled!");
                         }
                         else
                         {
-                            //console.Print("[GoThere] Custom locations have been disabled!");
                             Game.LogTrivial("Custom locations have been disabled!");
                         }
                         
@@ -296,7 +316,6 @@ namespace GoThere
                         if (ex is FormatException || ex is ArgumentNullException)
                         {
                             customLocationsEnabled = false;
-                            //console.Print("[GoThere] ERROR! You have entered a value in Options.xml for enabling custom locations that does not exist. Custom locations have been disabled!");
                             Game.LogTrivial("ERROR! You have entered a value in Options.xml for enabling custom locations that does not exist. Custom locations have been disabled!");
                             Game.DisplayNotification("~r~[GoThere] \n~w~You have entered a value in ~b~Options.xml ~w~for enabling custom locations that does not exist. Custom locations have been ~r~disabled~w~!");
                         }
@@ -319,8 +338,6 @@ namespace GoThere
                         writer.WriteEndElement();
                         writer.WriteEndElement();
                         writer.Flush();
-
-                       // console.Print("[GoThere] CustomLocations.xml did not exist, so it was created.");
                     }
                 }
                 else // If CustomLocations.xml already exists
@@ -350,7 +367,7 @@ namespace GoThere
                         }
                         catch(InvalidCastException ICE)
                         {
-                           // console.Print("[GoThere] There was a cast problem in CustomLocations.xml. Please re-check your values and try again.");
+                            Game.LogTrivial("There was a cast problem in CustomLocations.xml. Please re-check your values for your x, y, and z coordinates and try again.");
                         }
 
                     }
@@ -360,7 +377,6 @@ namespace GoThere
             }
             catch (DirectoryNotFoundException DNF) // Exception thrown when the GoThere folder does not reside in the Plugins folder upon loading the plugin. 
             {
-                //console.Print("[GoThere] GoThere folder could not be found in GTAV/Plugins folder. Please either create the folder or drag and drop it from the zip archive.");
                 Game.LogTrivial("GoThere folder could not be found in GTAV/Plugins folder. Please either create the folder or drag and drop it from the zip archive.");
                 Game.DisplayNotification("~r~[GoThere] \n~w~GoThere folder could not be found in ~g~GTAV~w~/~g~Plugins ~w~folder. Please either ~g~create ~w~the folder or ~g~drag and drop ~w~it from the zip archive.");
                 Game.UnloadActivePlugin();  //Exit the plugin? 
@@ -379,7 +395,16 @@ namespace GoThere
                            new XElement("LocationHeading", d.getHeading()));
             customLoc.Element("CustomLocations").Add(newStuff);
 
+           customLoc.Save("Plugins/GoThere/CustomLocations.xml");
+        }
+
+        public static void removeCustomLoc(Destination d)
+        {
+            XDocument customLoc = XDocument.Load("Plugins/GoThere/CustomLocations.xml"); // Parse CustomLocations.xml
+            customLoc.Descendants("CustomLocations")
+                     .Descendants("Item").Where(x => (string)x.Element("Name") == d.getName()).Remove();
             customLoc.Save("Plugins/GoThere/CustomLocations.xml");
+
         }
     }
 }
