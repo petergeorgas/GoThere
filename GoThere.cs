@@ -11,9 +11,7 @@ using Rage;
 using RAGENativeUI;
 using RAGENativeUI.Elements;
 
-[assembly: Rage.Attributes.Plugin("GoThere", Description = "GoThere enables users to teleport around the GTA V map with ease.", Author = "Cavasi")]
-
-//TODO: Prevent GoThere from being loaded multiple times.
+[assembly: Rage.Attributes.Plugin("GoThere", Description = "GoThere enables users to teleport around the GTA V map with ease.", Author = "Cavasi", PrefersSingleInstance = true)]
 namespace GoThere
 {
     public static class GoThere
@@ -30,107 +28,124 @@ namespace GoThere
         private static Keys menuKey;
         private static Keys removeKey;
         private static bool customLocationsEnabled;
+        private static Keys menuModifierKey;
         private static ControllerButtons XButton;
         public static List<Destination> customLocsList = new List<Destination>(); // List to add custom locations
         public static void Main()
         {
             handleFileCreation(); // Worry about the settings and such.
 
-            
-            current_item = "Bolingbroke"; // The current item of the list of police stations is updated to Bolingbroke, this fixes a bug where upon first loading the plugin, a user 
-                                          // Would have to switch to a different location before being able to teleport back to Bolingbroke. 
+            initMainMenu(); // Initialize the main menu
 
-
-           
-            
-
-
-            GoMenu = new UIMenu("GoThere", "~b~LET'S MOVE!");
-            StationList = new UIMenuListItem("~g~List of Stations: ", "", "Bolingbroke", "Davis", "Downtown Vinewood", "La Mesa", "LSIA", "Mission Row",
-                                                            "Paleto Bay", "Rockford Hills", "Sandy Shores", "Vespucci", "Vinewood Hills");
-
-            LocMenu = new UIMenu("Custom Locations", "");
-
-            menu_pool = new MenuPool();
-
-            MenuProcessFiber = new GameFiber(ProcessLoop);
-
-
-            menu_pool.Add(GoMenu); // Add our menu to the menu pool
-            GoMenu.AddItem(StationList); // Add a list of destinations -- maybe we want to hold destination OBJECTS. We shall see. 
-            GoMenu.OnItemSelect += OnItemSelect;
-            GoMenu.OnListChange += OnListChange;
-
-            if (customLocationsEnabled) // If custom locations are enabled 
-            {
-               
-                navigateToLocMenu = new UIMenuItem("Custom Locations");
-                LocMenu = new UIMenu("Custom Locations", "Teleport to custom locations."); // Initialize the locations menu
-                menu_pool.Add(LocMenu); // Add the locations menu to the menu pool
-                
-                GoMenu.AddItem(navigateToLocMenu);  // Add the ui item to the main menu
-                GoMenu.BindMenuToItem(LocMenu, navigateToLocMenu);  // Bind the locations menu to the ui item
-                LocMenu.ParentMenu = GoMenu;    // Set the parent menu of the locations menu to be the main menu
-                InstructionalButton removeButtonKeyButton = new InstructionalButton(removeKey.ToString(), "Remove Destination"); // Add instructional button showing users how to remove a dest.
-                LocMenu.AddInstructionalButton(removeButtonKeyButton);
-                RefreshCustomLocationsMenu();
-
-            }
-            GoMenu.RefreshIndex(); // Set the index at 0 by using the RefreshIndex method
-
-            
-
-            MenuProcessFiber.Start(); // Start process fiber
-
-            Game.DisplayNotification("~r~[GoThere] \nGoThere v1.0 ~w~by ~b~Cavasi ~w~has loaded successfully!"); // Display a notification above the radar that the plugin loaded successfully
-
-            GameFiber.Hibernate(); // Continue with our plugin. Prevent it from being unloaded
         }
 // e
-        public static void ProcessLoop()
+        public static void ProcessLoop() // I currently do not like the implementation of doing the same thing twice regardless of if the modifier key is involved or not regarding deleting locs.
         {
             int confirmPress = 0; // Value used to count how many times we have pressed the delete key
             while (true)
             {
-                int index = LocMenu.CurrentSelection; // Grab our current selection
-                GameFiber.Yield();
-                if ((Game.IsKeyDown(menuKey) || Game.IsControllerButtonDown(XButton)) && !menu_pool.IsAnyMenuOpen()) // Toggle switch for our menu. Going to make this a config file. 
+                if (customLocationsEnabled) // If custom locations are enabled
                 {
-                    GoMenu.Visible = !GoMenu.Visible;
-                }
-                else if(Game.IsKeyDown(removeKey) && LocMenu.Visible) // If the remove key is down and our menu is visible
-                {
-                    if (index != 0)
+                    int index = LocMenu.CurrentSelection; // Grab our current selection
+                    GameFiber.Yield();
+                    if (menuModifierKey.ToString().Equals("None")) // If we don't have a menu modifier key
                     {
-                        confirmPress++; // Increment the delete key
-                        if (confirmPress == 2)
+                        if ((Game.IsKeyDown(menuKey) || Game.IsControllerButtonDown(XButton)) && !menu_pool.IsAnyMenuOpen()) // Toggle switch for our menu.
                         {
-                            String deleteName = customLocsList[index - 1].getName();
-                            try
+                            GoMenu.Visible = !GoMenu.Visible;
+                        }
+                        else if (Game.IsKeyDown(removeKey) && LocMenu.Visible) // If the remove key is down and our menu is visible
+                        {
+                            if (index != 0)
                             {
-                                removeCustomLoc(customLocsList[index - 1]); // Remove from XML file
+                                confirmPress++; // Increment the delete key
+                                if (confirmPress == 2)
+                                {
+                                    String deleteName = customLocsList[index - 1].getName();
+                                    try
+                                    {
+                                        removeCustomLoc(customLocsList[index - 1]); // Remove from XML file
 
-                                customLocsList.RemoveAt(index - 1); // Remove the destination from customLocsList
+                                        customLocsList.RemoveAt(index - 1); // Remove the destination from customLocsList
 
-                                LocMenu.RemoveItemAt(index - 1); // Remove the destination from the menu
-                                confirmPress = 0;  // Reset the value of confirmPress
-                                RefreshCustomLocationsMenu(); // Refresh the menu
-                                Game.DisplaySubtitle("~r~" + deleteName + " ~w~has been deleted.");
-                            }
-                            catch(ArgumentOutOfRangeException AE)
-                            {
-                                Game.DisplayNotification("~r~[GoThere]\nSomething went wrong! IndexOutOfRange!");
-                                Game.LogVerbose("Something went wrong when deleting" + deleteName + ". IndexOutOfRange.");
+                                        LocMenu.RemoveItemAt(index - 1); // Remove the destination from the menu
+                                        confirmPress = 0;  // Reset the value of confirmPress
+                                        RefreshCustomLocationsMenu(); // Refresh the menu
+                                        Game.DisplaySubtitle("~r~" + deleteName + " ~w~has been deleted.");
+                                    }
+                                    catch (ArgumentOutOfRangeException AE)
+                                    {
+                                        Game.DisplayNotification("~r~[GoThere]\nSomething went wrong! IndexOutOfRange!");
+                                        Game.LogVerbose("Something went wrong when deleting" + deleteName + ". IndexOutOfRange.");
+                                    }
+                                }
+                                else
+                                {
+                                    Game.DisplaySubtitle("Press ~r~" + removeKey.ToString() + " ~w~again to confirm deletion.");
+                                }
                             }
                         }
-                        else
+                    }
+                    else if (!menuModifierKey.ToString().Equals("None"))// If we have a menu modifier key
+                    {
+                        if (((Game.IsKeyDown(menuKey) && Game.IsKeyDownRightNow(menuModifierKey)) || Game.IsControllerButtonDown(XButton)) && !menu_pool.IsAnyMenuOpen()) // Toggle switch for our menu. 
                         {
-                            Game.DisplaySubtitle("Press ~r~" + removeKey.ToString() + " ~w~again to confirm deletion.");
+                            GoMenu.Visible = !GoMenu.Visible;
+                        }
+                        else if (Game.IsKeyDown(removeKey) && LocMenu.Visible) // If the remove key is down and our menu is visible
+                        {
+                            if (index != 0)
+                            {
+                                confirmPress++; // Increment the delete key
+                                if (confirmPress == 2)
+                                {
+                                    String deleteName = customLocsList[index - 1].getName();
+                                    try
+                                    {
+                                        removeCustomLoc(customLocsList[index - 1]); // Remove from XML file
+
+                                        customLocsList.RemoveAt(index - 1); // Remove the destination from customLocsList
+
+                                        LocMenu.RemoveItemAt(index - 1); // Remove the destination from the menu
+                                        confirmPress = 0;  // Reset the value of confirmPress
+                                        RefreshCustomLocationsMenu(); // Refresh the menu
+                                        Game.DisplaySubtitle("~r~" + deleteName + " ~w~has been deleted.");
+                                    }
+                                    catch (ArgumentOutOfRangeException AE)
+                                    {
+                                        Game.DisplayNotification("~r~[GoThere]\nSomething went wrong! IndexOutOfRange!");
+                                        Game.LogVerbose("Something went wrong when deleting" + deleteName + ". IndexOutOfRange.");
+                                    }
+                                }
+                                else
+                                {
+                                    Game.DisplaySubtitle("Press ~r~" + removeKey.ToString() + " ~w~again to confirm deletion.");
+                                }
+                            }
+                        }
+                    }
+                }
+                else // If for some reason custom locations are disabled
+                {
+                    GameFiber.Yield();
+                    if (menuModifierKey.ToString().Equals("None")) // If we don't have a menu modifier key
+                    {
+                        if ((Game.IsKeyDown(menuKey) || Game.IsControllerButtonDown(XButton)) && !menu_pool.IsAnyMenuOpen()) // Toggle switch for our menu.
+                        {
+                            GoMenu.Visible = !GoMenu.Visible;
+                        }
+                    }
+                    else if (!menuModifierKey.ToString().Equals("None"))// If we have a menu modifier key
+                    {
+                        if (((Game.IsKeyDown(menuKey) && Game.IsKeyDownRightNow(menuModifierKey)) || Game.IsControllerButtonDown(XButton)) && !menu_pool.IsAnyMenuOpen()) // Toggle switch for our menu. 
+                        {
+                            GoMenu.Visible = !GoMenu.Visible;
                         }
                     }
                 }
 
-                menu_pool.ProcessMenus();
+
+                        menu_pool.ProcessMenus();
             }
         }
 
@@ -185,6 +200,50 @@ namespace GoThere
                 default:
                     break;
             }
+        }
+
+        public static void initMainMenu()
+        {
+            current_item = "Bolingbroke"; // The current item of the list of police stations is updated to Bolingbroke, this fixes a bug where upon first loading the plugin, a user 
+                                          // Would have to switch to a different location before being able to teleport back to Bolingbroke. 
+
+            GoMenu = new UIMenu("GoThere", "~b~LET'S MOVE!");
+            StationList = new UIMenuListItem("~g~List of Stations: ", "", "Bolingbroke", "Davis", "Downtown Vinewood", "La Mesa", "LSIA", "Mission Row",
+                                                            "Paleto Bay", "Rockford Hills", "Sandy Shores", "Vespucci", "Vinewood Hills");
+
+
+            menu_pool = new MenuPool();
+
+            MenuProcessFiber = new GameFiber(ProcessLoop);
+
+
+            menu_pool.Add(GoMenu); // Add our menu to the menu pool
+            GoMenu.AddItem(StationList); // Add a list of destinations -- maybe we want to hold destination OBJECTS. We shall see. 
+            GoMenu.OnItemSelect += OnItemSelect;
+            GoMenu.OnListChange += OnListChange;
+
+            if (customLocationsEnabled) // If custom locations are enabled 
+            {
+
+                navigateToLocMenu = new UIMenuItem("Custom Locations");
+                LocMenu = new UIMenu("Custom Locations", "Teleport to custom locations."); // Initialize the locations menu
+                menu_pool.Add(LocMenu); // Add the locations menu to the menu pool
+
+                GoMenu.AddItem(navigateToLocMenu);  // Add the ui item to the main menu
+                GoMenu.BindMenuToItem(LocMenu, navigateToLocMenu);  // Bind the locations menu to the ui item
+                LocMenu.ParentMenu = GoMenu;    // Set the parent menu of the locations menu to be the main menu
+                InstructionalButton removeButtonKeyButton = new InstructionalButton(removeKey.ToString(), "Remove Destination"); // Add instructional button showing users how to remove a dest.
+                LocMenu.AddInstructionalButton(removeButtonKeyButton);
+                RefreshCustomLocationsMenu();
+
+            }
+            GoMenu.RefreshIndex(); // Set the index at 0 by using the RefreshIndex method
+
+            MenuProcessFiber.Start(); // Start process fiber
+
+            Game.DisplayNotification("~r~[GoThere] \nGoThere v1.0 ~w~by ~b~Cavasi ~w~has loaded successfully!"); // Display a notification above the radar that the plugin loaded successfully
+
+            GameFiber.Hibernate(); // Continue with our plugin. Prevent it from being unloaded
         }
 
 
@@ -244,12 +303,13 @@ namespace GoThere
                     XmlWriterSettings settings = new XmlWriterSettings { Indent = true, OmitXmlDeclaration = true };
                     using (XmlWriter writer = XmlWriter.Create("Plugins/GoThere/Options.xml", settings)) // If the file key doesn't exist, create it
                     {
-                        writer.WriteComment("GoThere uses specific names for keys that can be found at https://bit.ly/2lZm1nt");
+                        writer.WriteComment("GoThere uses specific names for keys that can be found at https://bit.ly/2lZm1nt ");
                         writer.WriteStartElement("GoThere");
                         writer.WriteElementString("MenuKey", "F4");
+                        writer.WriteElementString("MenuModifierKey", "None");
                         writer.WriteElementString("RemoveDestinationKey", "R");
                         writer.WriteElementString("ControllerButton", "None");
-                        writer.WriteElementString("EnableCustomLocations", "false");
+                        writer.WriteElementString("EnableCustomLocations", "true");
                         writer.WriteEndElement();
                         writer.Flush();
 
@@ -266,10 +326,12 @@ namespace GoThere
                     options.Load("Plugins/GoThere/Options.xml"); // Load the XML document
 
                     XmlNode menuKeyNode = options.DocumentElement.SelectSingleNode("/GoThere/MenuKey");
+                    XmlNode menuModifierKeyNode = options.DocumentElement.SelectSingleNode("MenuModifierKey");
                     XmlNode buttonNode = options.DocumentElement.SelectSingleNode("/GoThere/ControllerButton"); //TODO: Add support for modifier keys & controller buttons as well.
                     XmlNode removeNode = options.DocumentElement.SelectSingleNode("/GoThere/RemoveDestinationKey");
                     XmlNode locationNode = options.DocumentElement.SelectSingleNode("/GoThere/EnableCustomLocations");
                     string tempkey = menuKeyNode.InnerText;
+                    string tempModifierKey = menuModifierKeyNode.InnerText;
                     string tempButton = buttonNode.InnerText;
                     string tempRemove = removeNode.InnerText;
                     string locationKey = locationNode.InnerText;
@@ -282,6 +344,7 @@ namespace GoThere
                     menuKeyNode = null;
                     removeNode = null;
                     locationNode = null;
+                    menuModifierKeyNode = null;
                     GC.Collect();
                     GC.WaitForPendingFinalizers(); // Called for GC to occur Synchronously.
 
@@ -289,6 +352,7 @@ namespace GoThere
                     try
                     {
                         menuKey = (System.Windows.Forms.Keys)Enum.Parse(typeof(Keys), tempkey); // Set the Menu key to whatever it is in the XML file.
+                        menuModifierKey = (System.Windows.Forms.Keys)Enum.Parse(typeof(Keys), tempModifierKey); // Set the Menu modifier key to whatever it is in the XML file.
                         XButton = (ControllerButtons)Enum.Parse(typeof(ControllerButtons), tempButton); // Set the Menu controller button to whatever it is in the XML file.
                         removeKey = (System.Windows.Forms.Keys)Enum.Parse(typeof(Keys), tempRemove); // Set the remove key to whatever it is in the XML file.
                         Game.LogTrivial("Key to open GoThere Menu: " + tempkey + "/" + tempButton + ". Key to remove a custom destination: " + tempRemove);
@@ -299,8 +363,8 @@ namespace GoThere
                         menuKey = Keys.F4; // Set the menuKey to F4
                         removeKey = Keys.R; // Set the remove key to R
                         // Do nothing with the xbox button. 
-                        Game.LogTrivial("ERROR: The value for MenuKey, ControllerButton, or RemoveDestinationKey in Options.xml does not exist! You can use F4 to open GoThere!");
-                        Game.DisplayNotification("~r~[GoThere] \n~w~You have entered a value in ~b~Options.xml ~w~for MenuKey, ControllerButton, or RemoveDestinationKey that does not exist. You can use ~g~F4 ~w~ to open GoThere!");
+                        Game.LogTrivial("ERROR: The value for MenuKey, MenuModifierKey, ControllerButton, or RemoveDestinationKey in Options.xml does not exist! You can use F4 to open GoThere!");
+                        Game.DisplayNotification("~r~[GoThere] \n~w~You have entered a value in ~b~Options.xml ~w~for MenuKey, MenuModifierKey, ControllerButton, or RemoveDestinationKey that does not exist. You can use ~g~F4 ~w~ to open GoThere!");
 
                     }
 
@@ -352,33 +416,34 @@ namespace GoThere
                     // For each item in the file
                     // Create a new destination object with the given data 
                     // Append to a list 
-                    
-                    XDocument customLoc = XDocument.Load("Plugins/GoThere/CustomLocations.xml");
-
-                    foreach(XElement element in customLoc.Descendants("Item"))
+                    if (customLocationsEnabled) // As long as custom locations are enabled
                     {
-                        try
-                        {
-                            String tempName = (String)element.Element("Name");
-                            if (!tempName.Equals("SampleLocation"))  // We don't want to add our sample location, so as long as the name of the location isn't SampleLocation, add it to our menu
-                            {
-                                float tempX = (float)element.Element("LocationX");
-                                float tempY = (float)element.Element("LocationY");
-                                float tempZ = (float)element.Element("LocationZ");
-                                float tempHead = (float)element.Element("LocationHeading");
-                                Vector3 tempVector = new Vector3(tempX, tempY, tempZ); // Cast the values to a float. This may be tricky. Need to make sure casting to float doesn't mess anything up.
-                                Destination newDest = new Destination(tempName, tempVector, tempHead);
-                                customLocsList.Add(newDest); // Append this new location to the list. 
-                                Game.LogTrivial("A custom location named: " + tempName + " has been created and added to the menu!");
-                            }
-                        }
-                        catch(InvalidCastException ICE)
-                        {
-                            Game.LogTrivial("There was a cast problem in CustomLocations.xml. Please re-check your values for your x, y, and z coordinates and try again.");
-                        }
+                        XDocument customLoc = XDocument.Load("Plugins/GoThere/CustomLocations.xml");
 
+                        foreach (XElement element in customLoc.Descendants("Item"))
+                        {
+                            try
+                            {
+                                String tempName = (String)element.Element("Name");
+                                if (!tempName.Equals("SampleLocation"))  // We don't want to add our sample location, so as long as the name of the location isn't SampleLocation, add it to our menu
+                                {
+                                    float tempX = (float)element.Element("LocationX");
+                                    float tempY = (float)element.Element("LocationY");
+                                    float tempZ = (float)element.Element("LocationZ");
+                                    float tempHead = (float)element.Element("LocationHeading");
+                                    Vector3 tempVector = new Vector3(tempX, tempY, tempZ); // Cast the values to a float. This may be tricky. Need to make sure casting to float doesn't mess anything up.
+                                    Destination newDest = new Destination(tempName, tempVector, tempHead);
+                                    customLocsList.Add(newDest); // Append this new location to the list. 
+                                    Game.LogTrivial("A custom location named: " + tempName + " has been created and added to the menu!");
+                                }
+                            }
+                            catch (InvalidCastException ICE)
+                            {
+                                Game.LogTrivial("There was a cast problem in CustomLocations.xml. Please re-check your values for your x, y, and z coordinates and try again.");
+                            }
+
+                        }
                     }
-                    
     
                 }
             }
