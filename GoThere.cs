@@ -23,6 +23,11 @@ namespace GoThere
         private static UIMenuListItem StationList;
         private static UIMenuListItem CustomList;
         private static UIMenuItem navigateToLocMenu;
+        GoMenu.MouseControlsEnabled = false;
+        LocMenu.MouseControlsEnabled = false;
+        GoMenu.AllowCameraMovement = true;
+        LocMenu.AllowCameraMovement = true;
+            
         
         private static String current_item;
         private static Keys menuKey;
